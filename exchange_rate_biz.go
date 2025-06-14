@@ -8,8 +8,9 @@ import (
 	"net/http"
 	"net/url"
 	"strings"
+	"time"
 
-	"github.com/zeromicro/go-zero/core/logx"
+	"go.uber.org/zap"
 )
 
 type ExchangeRateRtnItem struct {
@@ -34,21 +35,31 @@ type Config struct {
 	SecretKey       string `json:"secretKey"`
 	ExchangeRateUrl string `json:"exchangeRateUrl"`
 }
+
+// ExchangeRateBiz 汇率查询业务
 type ExchangeRateBiz struct {
 	ctx    context.Context
-	logger logx.Logger
+	client *http.Client
+	logger *zap.Logger
 	conf   *Config
 }
 
+// NewExchangeRateBiz 创建汇率查询业务
 func NewExchangeRateBiz(ctx context.Context, conf *Config) *ExchangeRateBiz {
 	return &ExchangeRateBiz{
 		ctx:    ctx,
-		logger: logx.WithContext(ctx).WithFields(logx.Field("module", "huaweicloud.ExchangeRateBiz")),
+		client: &http.Client{Timeout: 10 * time.Second},
+		logger: zap.L().With(zap.String("module", "huaweicloud.ExchangeRateBiz")),
 		conf:   conf,
 	}
 }
+
+// QueryExchangeRate 查询汇率
 func (b *ExchangeRateBiz) QueryExchangeRate(fromCode, toCode string) (ExchangeRateRtnItem, error) {
-	logger := logx.WithContext(b.ctx)
+	logger := b.logger.With(
+		zap.String("fromCode", fromCode),
+		zap.String("toCode", toCode),
+	)
 	var rtnItem ExchangeRateRtnItem
 	postData := url.Values{
 		"fromCode": {fromCode},
@@ -56,18 +67,15 @@ func (b *ExchangeRateBiz) QueryExchangeRate(fromCode, toCode string) (ExchangeRa
 		"money":    {"1"},
 	}
 
-	defer func() {
-		logger.Infow("queryExchangeRate")
-	}()
-	logger.WithFields(logx.Field("postData", postData.Encode()))
+	logger.Debug("querying exchange rate", zap.String("postData", postData.Encode()))
 
 	//https://jmtyhlcxv2.apistore.huaweicloud.com/exchange-rate-v2/convert
 	var covertHost = b.conf.ExchangeRateUrl
-	r, err := http.NewRequest("POST", covertHost,
+	req, err := http.NewRequestWithContext(b.ctx, "POST", covertHost,
 		strings.NewReader(postData.Encode()))
 
 	if err != nil {
-		logger.WithFields(logx.Field("error.NewRequest", err.Error()))
+		logger.Error("failed to create request", zap.Error(err))
 		return rtnItem, err
 	}
 
@@ -76,33 +84,30 @@ func (b *ExchangeRateBiz) QueryExchangeRate(fromCode, toCode string) (ExchangeRa
 		Secret: b.conf.SecretKey,
 	}
 
-	r.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-	err = s.Sign(r)
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	err = s.Sign(req)
 	if err != nil {
-		logger.WithFields(logx.Field("error.sign", err.Error()))
-
+		logger.Error("failed to sign request", zap.Error(err))
 		return rtnItem, err
 	}
 
-	client := http.DefaultClient
-	resp, err := client.Do(r)
+	resp, err := b.client.Do(req)
 	if err != nil {
-
-		logger.WithFields(logx.Field("error.client.do", err.Error()))
+		logger.Error("failed to send request", zap.Error(err))
 		return rtnItem, err
 	}
 
 	defer resp.Body.Close()
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
-		logger.WithFields(logx.Field("error.readAll", err.Error()))
+		logger.Error("failed to read response", zap.Error(err))
 		return rtnItem, err
 	}
-	logger.WithFields(logx.Field("queryRtn", string(body)))
+	logger.Debug("received response", zap.String("response", string(body)))
 	var queryRtn ExchangeRateQueryRtn
 	err = json.Unmarshal(body, &queryRtn)
 	if err != nil {
-		logger.WithFields(logx.Field("error.Unmarshal", err.Error()))
+		logger.Error("failed to unmarshal response", zap.Error(err))
 		return rtnItem, err
 	}
 	if !queryRtn.Success {
