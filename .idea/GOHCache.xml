@@ -1,0 +1,92 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="GoORMHelperCache">
+    <option name="schemaMapping">
+      <map>
+        <entry key="Config">
+          <value>
+            <set>
+              <option value="file://$PROJECT_DIR$/exchange_rate_biz.go" />
+            </set>
+          </value>
+        </entry>
+        <entry key="ExchangeRateBiz">
+          <value>
+            <set>
+              <option value="file://$PROJECT_DIR$/exchange_rate_biz.go" />
+            </set>
+          </value>
+        </entry>
+        <entry key="ExchangeRateQueryRtn">
+          <value>
+            <set>
+              <option value="file://$PROJECT_DIR$/exchange_rate_biz.go" />
+            </set>
+          </value>
+        </entry>
+        <entry key="ExchangeRateRtnItem">
+          <value>
+            <set>
+              <option value="file://$PROJECT_DIR$/exchange_rate_biz.go" />
+            </set>
+          </value>
+        </entry>
+        <entry key="Signer">
+          <value>
+            <set>
+              <option value="file://$PROJECT_DIR$/signer.go" />
+            </set>
+          </value>
+        </entry>
+      </map>
+    </option>
+    <option name="scannedPathMapping">
+      <map>
+        <entry key="file://$PROJECT_DIR$/escape.go">
+          <value>
+            <ScannedPath>
+              <option name="lastModified" value="1749869788473" />
+            </ScannedPath>
+          </value>
+        </entry>
+        <entry key="file://$PROJECT_DIR$/exchange_rate_biz.go">
+          <value>
+            <ScannedPath>
+              <option name="lastModified" value="1750062605299" />
+              <option name="schema">
+                <list>
+                  <option value="ExchangeRateRtnItem" />
+                  <option value="ExchangeRateQueryRtn" />
+                  <option value="Config" />
+                  <option value="ExchangeRateBiz" />
+                </list>
+              </option>
+            </ScannedPath>
+          </value>
+        </entry>
+        <entry key="file://$PROJECT_DIR$/signer.go">
+          <value>
+            <ScannedPath>
+              <option name="lastModified" value="1749798040811" />
+              <option name="schema">
+                <list>
+                  <option value="Signer" />
+                </list>
+              </option>
+            </ScannedPath>
+          </value>
+        </entry>
+      </map>
+    </option>
+    <option name="tableStructMapping">
+      <map>
+        <entry key="config" value="Config" />
+        <entry key="exchange_rate_biz" value="ExchangeRateBiz" />
+        <entry key="exchange_rate_query_rtn" value="ExchangeRateQueryRtn" />
+        <entry key="exchange_rate_rtn_item" value="ExchangeRateRtnItem" />
+        <entry key="signer" value="Signer" />
+      </map>
+    </option>
+    <option name="lastTimeChecked" value="1750062506175" />
+  </component>
+</project>

@@ -60,6 +60,10 @@ func (b *ExchangeRateBiz) QueryExchangeRate(fromCode, toCode string) (ExchangeRa
 		zap.String("fromCode", fromCode),
 		zap.String("toCode", toCode),
 	)
+	defer func() {
+		logger.Info("汇率查询")
+	}()
+
 	var rtnItem ExchangeRateRtnItem
 	postData := url.Values{
 		"fromCode": {fromCode},
@@ -67,7 +71,7 @@ func (b *ExchangeRateBiz) QueryExchangeRate(fromCode, toCode string) (ExchangeRa
 		"money":    {"1"},
 	}
 
-	logger.Debug("querying exchange rate", zap.String("postData", postData.Encode()))
+	logger = logger.With(zap.String("postData", postData.Encode()))
 
 	//https://jmtyhlcxv2.apistore.huaweicloud.com/exchange-rate-v2/convert
 	var covertHost = b.conf.ExchangeRateUrl
@@ -103,7 +107,7 @@ func (b *ExchangeRateBiz) QueryExchangeRate(fromCode, toCode string) (ExchangeRa
 		logger.Error("failed to read response", zap.Error(err))
 		return rtnItem, err
 	}
-	logger.Debug("received response", zap.String("response", string(body)))
+	logger = logger.With(zap.String("response", string(body)))
 	var queryRtn ExchangeRateQueryRtn
 	err = json.Unmarshal(body, &queryRtn)
 	if err != nil {
