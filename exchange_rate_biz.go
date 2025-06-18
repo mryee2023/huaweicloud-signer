@@ -10,7 +10,7 @@ import (
 	"strings"
 	"time"
 
-	"go.uber.org/zap"
+	"github.com/sirupsen/logrus"
 )
 
 type ExchangeRateRtnItem struct {
@@ -40,8 +40,14 @@ type Config struct {
 type ExchangeRateBiz struct {
 	ctx    context.Context
 	client *http.Client
-	logger *zap.Logger
 	conf   *Config
+}
+
+func init() {
+	// 只显示 Info 级别以上的日志
+	logrus.SetLevel(logrus.InfoLevel)
+	logrus.SetFormatter(&logrus.JSONFormatter{})
+
 }
 
 // NewExchangeRateBiz 创建汇率查询业务
@@ -49,21 +55,23 @@ func NewExchangeRateBiz(ctx context.Context, conf *Config) *ExchangeRateBiz {
 	return &ExchangeRateBiz{
 		ctx:    ctx,
 		client: &http.Client{Timeout: 10 * time.Second},
-		logger: zap.L().With(zap.String("module", "huaweicloud.ExchangeRateBiz")),
 		conf:   conf,
 	}
 }
 
 // QueryExchangeRate 查询汇率
 func (b *ExchangeRateBiz) QueryExchangeRate(fromCode, toCode string) (ExchangeRateRtnItem, error) {
-	logger := b.logger.With(
-		zap.String("fromCode", fromCode),
-		zap.String("toCode", toCode),
-	)
+	// 创建一个新的日志条目，用于收集所有字段
+	entry := logrus.WithFields(logrus.Fields{
+		"fromCode": fromCode,
+		"toCode":   toCode,
+	})
 	defer func() {
-		logger.Info("汇率查询")
-	}()
+		if err := recover(); err != nil {
 
+		}
+		entry.Info("查询汇率")
+	}()
 	var rtnItem ExchangeRateRtnItem
 	postData := url.Values{
 		"fromCode": {fromCode},
@@ -71,15 +79,14 @@ func (b *ExchangeRateBiz) QueryExchangeRate(fromCode, toCode string) (ExchangeRa
 		"money":    {"1"},
 	}
 
-	logger = logger.With(zap.String("postData", postData.Encode()))
+	entry = entry.WithField("postData", postData.Encode())
 
-	//https://jmtyhlcxv2.apistore.huaweicloud.com/exchange-rate-v2/convert
 	var covertHost = b.conf.ExchangeRateUrl
 	req, err := http.NewRequestWithContext(b.ctx, "POST", covertHost,
 		strings.NewReader(postData.Encode()))
 
 	if err != nil {
-		logger.Error("failed to create request", zap.Error(err))
+		entry.WithError(err).Error("创建请求失败")
 		return rtnItem, err
 	}
 
@@ -91,31 +98,38 @@ func (b *ExchangeRateBiz) QueryExchangeRate(fromCode, toCode string) (ExchangeRa
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 	err = s.Sign(req)
 	if err != nil {
-		logger.Error("failed to sign request", zap.Error(err))
+		entry.WithError(err).Error("签名失败")
 		return rtnItem, err
 	}
 
 	resp, err := b.client.Do(req)
 	if err != nil {
-		logger.Error("failed to send request", zap.Error(err))
+		entry.WithError(err).Error("发送请求失败")
 		return rtnItem, err
 	}
 
 	defer resp.Body.Close()
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
-		logger.Error("failed to read response", zap.Error(err))
+		entry.WithError(err).Error("读取响应失败")
 		return rtnItem, err
 	}
-	logger = logger.With(zap.String("response", string(body)))
+
+	entry = entry.WithField("response", string(body))
+
 	var queryRtn ExchangeRateQueryRtn
 	err = json.Unmarshal(body, &queryRtn)
 	if err != nil {
-		logger.Error("failed to unmarshal response", zap.Error(err))
+		entry.WithError(err).Error("解析响应失败")
 		return rtnItem, err
 	}
 	if !queryRtn.Success {
+		entry = entry.WithFields(logrus.Fields{
+			"code": queryRtn.Code,
+			"msg":  queryRtn.Msg,
+		})
 		return rtnItem, errors.New(queryRtn.Msg)
 	}
+
 	return queryRtn.Data, nil
 }
